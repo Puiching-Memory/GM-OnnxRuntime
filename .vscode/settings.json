@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "cpu_provider_factory.h": "c",
+        "onnxruntime_c_api.h": "c"
+    }
+}
