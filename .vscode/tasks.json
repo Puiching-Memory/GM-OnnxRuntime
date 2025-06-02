@@ -35,11 +35,13 @@
                 "/Zi", // 调试信息
                 "/EHsc", // 异常处理
                 "/nologo", // 不显示版权信息
+                "/I\"${fileDirname}\\include\"",
                 "/LD", // 生成DLL
                 "/MD", // 使用多线程DLL运行时
                 "/Fe${fileDirname}\\${fileBasenameNoExtension}.dll", // 输出DLL文件
                 "${file}", // 源文件
                 "/link", // 开始链接参数
+                "/LIBPATH:\"${fileDirname}\\lib\"",
                 "onnxruntime.lib" // 链接ONNX Runtime库
             ],
             "options": {

@@ -7,7 +7,9 @@
 onnx_forward(){
 }
 
-char GetVersionString(){
+__declspec(dllexport) const char* GetVersionString(){
+    const OrtApiBase* ortApiBase = OrtGetApiBase();
+    return ortApiBase->GetVersionString();
 }
 
 void main(){
@@ -19,5 +21,5 @@ void main(){
     ortApi->CreateEnv(ORT_LOGGING_LEVEL_VERBOSE,"GMLayerLog",&ortEnv);
 
     OrtSession* session = NULL;
-    ortApi->CreateSession(ortEnv,"",);
+    //ortApi->CreateSession(ortEnv,"",);
 }
