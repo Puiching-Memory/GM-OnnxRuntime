@@ -4,22 +4,40 @@
 #include "onnxruntime_c_api.h"
 
 // GameMaker only support String/Double
-const wchar_t* char_to_wide_char(const char* str);
+
+const wchar_t *char_to_wide_char(const char *str);
+
+static OrtEnv *ortEnv = NULL;
+static OrtSessionOptions *ortSessionOptions = NULL;
+static OrtMemoryInfo *ortMemoryInfo = NULL;
+static const OrtApi *ortApi = NULL;
+OrtErrorCode ortErrorCode;
+OrtStatus *ortStatus;
+
+__declspec(dllexport) void __stdcall gmortInit()
+{
+    if (ortEnv == NULL)
+    {
+        const OrtApiBase *ortApiBase = OrtGetApiBase();
+        ortApi = ortApiBase->GetApi(17);
+
+        ortApi->CreateEnv(ORT_LOGGING_LEVEL_VERBOSE, "GMLayerLog", &ortEnv);
+        ortApi->CreateSessionOptions(&ortSessionOptions);
+        ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
+    }
+}
+
+__declspec(dllexport) void __stdcall gmortFree()
+{
+    if (ortEnv)
+    {
+        ortApi->ReleaseMemoryInfo(ortMemoryInfo);
+        ortApi->ReleaseSessionOptions(ortSessionOptions);
+        ortApi->ReleaseEnv(ortEnv);
+    }
+}
 __declspec(dllexport) double __stdcall gmortInferenceDouble2Double(const char *model_path, double inputData)
 {
-    OrtErrorCode ortErrorCode;
-    OrtStatus *ortStatus;
-
-    const OrtApiBase *ortApiBase = OrtGetApiBase();
-    printf("%s\n", ortApiBase->GetVersionString());
-    const OrtApi *ortApi = ortApiBase->GetApi(17);
-
-    OrtEnv *ortEnv = NULL;
-    ortApi->CreateEnv(ORT_LOGGING_LEVEL_VERBOSE, "GMLayerLog", &ortEnv);
-
-    OrtSessionOptions *ortSessionOptions = NULL;
-    ortApi->CreateSessionOptions(&ortSessionOptions);
-
     printf("Model Path: %s\n", model_path);
     printf("wide Model Path: %ls\n", char_to_wide_char(model_path));
 
@@ -27,9 +45,6 @@ __declspec(dllexport) double __stdcall gmortInferenceDouble2Double(const char *m
     ortStatus = ortApi->CreateSession(ortEnv, char_to_wide_char(model_path), ortSessionOptions, &ortSession);
     if (ortStatus != NULL)
         printf("%s\n", ortApi->GetErrorMessage(ortStatus));
-
-    OrtMemoryInfo *ortMemoryInfo = NULL;
-    ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
 
     int64_t inputDims[] = {1};
 
@@ -50,6 +65,8 @@ __declspec(dllexport) double __stdcall gmortInferenceDouble2Double(const char *m
 
     // 执行推理
     ortStatus = ortApi->Run(ortSession, NULL, &inputName, &inputTensor, 1, &outputName, 1, &outputTensor);
+    if (ortStatus != NULL)
+        printf("%s\n", ortApi->GetErrorMessage(ortStatus));
 
     // 获取输出结果
     double *Data;
@@ -58,9 +75,6 @@ __declspec(dllexport) double __stdcall gmortInferenceDouble2Double(const char *m
 
     // clean up
     ortApi->ReleaseSession(ortSession);
-    ortApi->ReleaseSessionOptions(ortSessionOptions);
-    ortApi->ReleaseEnv(ortEnv);
-    ortApi->ReleaseMemoryInfo(ortMemoryInfo);
 
     return Data[0];
 }
@@ -71,13 +85,14 @@ __declspec(dllexport) const char *__stdcall gmortGetVersionString()
 }
 
 // 将 char* 转换为 const wchar_t*
-const wchar_t* char_to_wide_char(const char* str) {
-    
+const wchar_t *char_to_wide_char(const char *str)
+{
+
     // 计算所需的宽字符缓冲区大小
     int length = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
 
     // 分配内存并转换
-    wchar_t* wstr = (wchar_t*)malloc(length * sizeof(wchar_t));
+    wchar_t *wstr = (wchar_t *)malloc(length * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, str, -1, wstr, length);
 
     return wstr; // 返回 const wchar_t*
@@ -85,5 +100,7 @@ const wchar_t* char_to_wide_char(const char* str) {
 
 void main()
 {
+    gmortInit();
     gmortInferenceDouble2Double("C:/workspace/github/GM-OnnxRuntime/mlp.onnx", 0.5);
+    gmortFree();
 }
