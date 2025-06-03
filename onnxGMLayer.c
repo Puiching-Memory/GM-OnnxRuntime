@@ -85,58 +85,5 @@ const wchar_t* char_to_wide_char(const char* str) {
 
 void main()
 {
-    // OrtErrorCode ortErrorCode;
-    // OrtStatus *ortStatus;
-
-    // const OrtApiBase *ortApiBase = OrtGetApiBase();
-    // printf("%s\n", ortApiBase->GetVersionString());
-    // const OrtApi *ortApi = ortApiBase->GetApi(17);
-
-    // OrtEnv *ortEnv = NULL;
-    // ortApi->CreateEnv(ORT_LOGGING_LEVEL_VERBOSE, "GMLayerLog", &ortEnv);
-
-    // OrtSessionOptions *ortSessionOptions = NULL;
-    // ortApi->CreateSessionOptions(&ortSessionOptions);
-
-    // OrtSession *ortSession = NULL;
-    // ortStatus = ortApi->CreateSession(ortEnv, L"mlp.onnx", ortSessionOptions, &ortSession);
-    // if (ortStatus != NULL)
-    //     printf("%s\n", ortApi->GetErrorMessage(ortStatus));
-
-    // OrtMemoryInfo *ortMemoryInfo = NULL;
-    // ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
-
-    // float inputData[] = {0.1f}; // 根据模型输入调整
-    // int64_t inputDims[] = {1};
-
-    // OrtValue *inputTensor = NULL;
-    // OrtValue *outputTensor = NULL;
-    // ortApi->CreateTensorWithDataAsOrtValue(ortMemoryInfo, inputData, sizeof(inputData),
-    //                                        inputDims, 1, ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
-    //                                        &inputTensor);
-
-    // OrtAllocator *ortAllocator = NULL;
-    // ortApi->GetAllocatorWithDefaultOptions(&ortAllocator);
-
-    // const char *inputName;
-    // ortApi->SessionGetInputName(ortSession, 0, ortAllocator, &inputName);
-
-    // const char *outputName;
-    // ortApi->SessionGetOutputName(ortSession, 0, ortAllocator, &outputName);
-
-    // // 执行推理
-    // ortStatus = ortApi->Run(ortSession, NULL, &inputName, &inputTensor, 1, &outputName, 1, &outputTensor);
-
-    // // 获取输出结果
-    // float *floatData;
-    // ortApi->GetTensorMutableData(outputTensor, (void **)&floatData);
-    // printf("Output: %f\n", floatData[0]);
-
-    // // clean up
-    // ortApi->ReleaseSession(ortSession);
-    // ortApi->ReleaseSessionOptions(ortSessionOptions);
-    // ortApi->ReleaseEnv(ortEnv);
-    // ortApi->ReleaseMemoryInfo(ortMemoryInfo);
-
     gmortInferenceDouble2Double("C:/workspace/github/GM-OnnxRuntime/mlp.onnx", 0.5);
 }
