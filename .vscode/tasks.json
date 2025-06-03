@@ -7,6 +7,7 @@
             "args": [
                 "/Zi",
                 "/EHsc",
+                "/std:c17",
                 "/nologo",
                 "/I\"${fileDirname}\\include\"",
                 "/Fe${fileDirname}\\${fileBasenameNoExtension}.exe",
@@ -34,6 +35,7 @@
             "args": [
                 "/Zi", // 调试信息
                 "/EHsc", // 异常处理
+                "/std:c17",
                 "/nologo", // 不显示版权信息
                 "/I\"${fileDirname}\\include\"",
                 "/LD", // 生成DLL
