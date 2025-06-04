@@ -11,41 +11,47 @@ static OrtEnv *ortEnv = NULL;
 static OrtSessionOptions *ortSessionOptions = NULL;
 static OrtMemoryInfo *ortMemoryInfo = NULL;
 static const OrtApi *ortApi = NULL;
+OrtSession *ortSession = NULL;
 OrtErrorCode ortErrorCode;
 OrtStatus *ortStatus;
 
-__declspec(dllexport) void __stdcall gmortInit()
+__declspec(dllexport) void __stdcall ortInit(int ortLoggingLevel)
 {
     if (ortEnv == NULL)
-    {
+    {   
         const OrtApiBase *ortApiBase = OrtGetApiBase();
         ortApi = ortApiBase->GetApi(17);
-
-        ortApi->CreateEnv(ORT_LOGGING_LEVEL_VERBOSE, "GMLayerLog", &ortEnv);
+        ortApi->CreateEnv(ortLoggingLevel, "GMLayerLog", &ortEnv);
         ortApi->CreateSessionOptions(&ortSessionOptions);
         ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
     }
 }
 
-__declspec(dllexport) void __stdcall gmortFree()
+__declspec(dllexport) void __stdcall ortFree()
 {
     if (ortEnv)
     {
         ortApi->ReleaseMemoryInfo(ortMemoryInfo);
         ortApi->ReleaseSessionOptions(ortSessionOptions);
         ortApi->ReleaseEnv(ortEnv);
+        ortApi->ReleaseSession(ortSession);
     }
 }
-__declspec(dllexport) double __stdcall gmortInferenceDouble2Double(const char *model_path, double inputData)
+
+__declspec(dllexport) void __stdcall ortLoadModelFromFile(const char *model_path)
 {
     printf("Model Path: %s\n", model_path);
     printf("wide Model Path: %ls\n", char_to_wide_char(model_path));
 
-    OrtSession *ortSession = NULL;
     ortStatus = ortApi->CreateSession(ortEnv, char_to_wide_char(model_path), ortSessionOptions, &ortSession);
     if (ortStatus != NULL)
         printf("%s\n", ortApi->GetErrorMessage(ortStatus));
+}
 
+// __declspec(dllexport) void __stdcall gmortLoadModelFromBuffer()
+// {}
+__declspec(dllexport) double __stdcall ortInferenceDouble2Double(double inputData)
+{
     int64_t inputDims[] = {1};
 
     OrtValue *inputTensor = NULL;
@@ -71,14 +77,11 @@ __declspec(dllexport) double __stdcall gmortInferenceDouble2Double(const char *m
     // 获取输出结果
     double *Data;
     ortApi->GetTensorMutableData(outputTensor, (void **)&Data);
-    printf("Output: %f\n", Data[0]);
-
-    // clean up
-    ortApi->ReleaseSession(ortSession);
+    printf("Output: %f\n", Data[0]);    
 
     return Data[0];
 }
-__declspec(dllexport) const char *__stdcall gmortGetVersionString()
+__declspec(dllexport) const char *__stdcall ortGetVersionString()
 {
     const OrtApiBase *ortApiBase = OrtGetApiBase();
     return ortApiBase->GetVersionString();
@@ -100,7 +103,10 @@ const wchar_t *char_to_wide_char(const char *str)
 
 void main()
 {
-    gmortInit();
-    gmortInferenceDouble2Double("C:/workspace/github/GM-OnnxRuntime/mlp.onnx", 0.5);
-    gmortFree();
+    ortInit(ORT_LOGGING_LEVEL_VERBOSE);
+    printf("ONNX Runtime Version: %s\n", ortGetVersionString());
+    ortLoadModelFromFile("C:/workspace/github/GM-OnnxRuntime/mlp.onnx");
+    ortInferenceDouble2Double(0.5);
+    ortInferenceDouble2Double(0.1);
+    ortFree();
 }
