@@ -18,13 +18,13 @@ const char *outputName = NULL;
 OrtErrorCode ortErrorCode;
 OrtStatus *ortStatus;
 
-__declspec(dllexport) void __stdcall ortInit(int ortLoggingLevel)
+__declspec(dllexport) void __stdcall ortInit()
 {
     if (ortEnv == NULL)
     {
         const OrtApiBase *ortApiBase = OrtGetApiBase();
         ortApi = ortApiBase->GetApi(17);
-        ortApi->CreateEnv(ortLoggingLevel, "GMLayerLog", &ortEnv);
+        ortApi->CreateEnv(ORT_LOGGING_LEVEL_VERBOSE, "GMLayerLog", &ortEnv);
         ortApi->CreateSessionOptions(&ortSessionOptions);
     }
 }
@@ -105,7 +105,7 @@ const wchar_t *char_to_wide_char(const char *str)
 
 void main()
 {
-    ortInit(ORT_LOGGING_LEVEL_VERBOSE);
+    ortInit();
     printf("ONNX Runtime Version: %s\n", ortGetVersionString());
     ortLoadModelFromFile("C:/workspace/github/GM-OnnxRuntime/mlp.onnx");
     int64_t inputDims[] = {3};
