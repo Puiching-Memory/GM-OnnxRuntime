@@ -53,16 +53,22 @@ __declspec(dllexport) void __stdcall ortLoadModelFromFile(const char *model_path
     ortApi->SessionGetOutputName(ortSession, 0, ortAllocator, &outputName);
 }
 
-__declspec(dllexport) double *__stdcall ortRunDouble(double *inputData, int64_t *inputDims)
+__declspec(dllexport) double __stdcall ortRunDouble(double *inputData, uint64_t inputDataLength, uint64_t *inputShape)
 {
     OrtValue *inputTensor = NULL;
     OrtValue *outputTensor = NULL;
     static OrtMemoryInfo *ortMemoryInfo = NULL;
     ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
 
-    ortApi->CreateTensorWithDataAsOrtValue(ortMemoryInfo, inputData, inputDims[0] * sizeof(double),
-                                           inputDims, 1, ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE,
-                                           &inputTensor);
+    ortStatus = ortApi->CreateTensorWithDataAsOrtValue(ortMemoryInfo,
+                                                       inputData,
+                                                       sizeof(double) * inputDataLength,
+                                                       inputShape,
+                                                       sizeof(inputShape) / sizeof(inputShape[0]),
+                                                       ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE,
+                                                       &inputTensor);
+    if (ortStatus != NULL)
+        printf("CreateTensorWithDataAsOrtValue:%s\n", ortApi->GetErrorMessage(ortStatus));
 
     // 执行推理
     ortStatus = ortApi->Run(ortSession, NULL, &inputName, &inputTensor, 1, &outputName, 1, &outputTensor);
@@ -74,13 +80,27 @@ __declspec(dllexport) double *__stdcall ortRunDouble(double *inputData, int64_t 
     ortApi->GetTensorMutableData(outputTensor, (void **)&Data);
     if (ortStatus != NULL)
         printf("GetTensorMutableData:%s\n", ortApi->GetErrorMessage(ortStatus));
+    
+    
+    // 获取输出张量的形状
+    OrtTensorTypeAndShapeInfo *tensorInfo = NULL;
+    ortApi->GetTensorTypeAndShape(outputTensor, &tensorInfo);
+
+    size_t outputShape;
+    ortApi->GetTensorShapeElementCount(tensorInfo, &outputShape);
+
+    for (int i = 0; i < outputShape; i++)
+    {
+        printf("%f,", Data[i]);
+        inputData[i] = Data[i]; // 将结果存储回输入数据
+    }
 
     // 释放资源
     ortApi->ReleaseMemoryInfo(ortMemoryInfo);
     ortApi->ReleaseValue(inputTensor);
     ortApi->ReleaseValue(outputTensor);
 
-    return Data;
+    return outputShape;
 }
 
 __declspec(dllexport) const char *__stdcall ortGetVersionString()
@@ -108,14 +128,8 @@ void main()
     ortInit();
     printf("ONNX Runtime Version: %s\n", ortGetVersionString());
     ortLoadModelFromFile("C:/workspace/github/GM-OnnxRuntime/mlp.onnx");
-    int64_t inputDims[] = {3};
     double inputData[] = {0.1, 0.2, 0.3};
-    double *data = ortRunDouble(inputData, inputDims);
-
-    for (int i = 0; i < 3; i++)
-    {
-        printf("%f,", data[i]);
-    }
-
+    uint64_t inputShape[] = {3};
+    ortRunDouble(inputData, sizeof(inputData) / sizeof(inputData[0]) , inputShape);
     ortFree();
 }
