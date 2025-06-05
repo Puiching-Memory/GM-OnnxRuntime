@@ -9,21 +9,23 @@ const wchar_t *char_to_wide_char(const char *str);
 
 static OrtEnv *ortEnv = NULL;
 static OrtSessionOptions *ortSessionOptions = NULL;
-static OrtMemoryInfo *ortMemoryInfo = NULL;
 static const OrtApi *ortApi = NULL;
 OrtSession *ortSession = NULL;
+OrtAllocator *ortAllocator = NULL;
+const char *inputName = NULL;
+const char *outputName = NULL;
+
 OrtErrorCode ortErrorCode;
 OrtStatus *ortStatus;
 
 __declspec(dllexport) void __stdcall ortInit(int ortLoggingLevel)
 {
     if (ortEnv == NULL)
-    {   
+    {
         const OrtApiBase *ortApiBase = OrtGetApiBase();
         ortApi = ortApiBase->GetApi(17);
         ortApi->CreateEnv(ortLoggingLevel, "GMLayerLog", &ortEnv);
         ortApi->CreateSessionOptions(&ortSessionOptions);
-        ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
     }
 }
 
@@ -31,7 +33,6 @@ __declspec(dllexport) void __stdcall ortFree()
 {
     if (ortEnv)
     {
-        ortApi->ReleaseMemoryInfo(ortMemoryInfo);
         ortApi->ReleaseSessionOptions(ortSessionOptions);
         ortApi->ReleaseEnv(ortEnv);
         ortApi->ReleaseSession(ortSession);
@@ -45,42 +46,43 @@ __declspec(dllexport) void __stdcall ortLoadModelFromFile(const char *model_path
 
     ortStatus = ortApi->CreateSession(ortEnv, char_to_wide_char(model_path), ortSessionOptions, &ortSession);
     if (ortStatus != NULL)
-        printf("%s\n", ortApi->GetErrorMessage(ortStatus));
+        printf("CreateSession:%s\n", ortApi->GetErrorMessage(ortStatus));
+
+    ortApi->GetAllocatorWithDefaultOptions(&ortAllocator);
+    ortApi->SessionGetInputName(ortSession, 0, ortAllocator, &inputName);
+    ortApi->SessionGetOutputName(ortSession, 0, ortAllocator, &outputName);
 }
 
-// __declspec(dllexport) void __stdcall gmortLoadModelFromBuffer()
-// {}
-__declspec(dllexport) double __stdcall ortInferenceDouble2Double(double inputData)
+__declspec(dllexport) double *__stdcall ortRunDouble(double *inputData, int64_t *inputDims)
 {
-    int64_t inputDims[] = {1};
-
     OrtValue *inputTensor = NULL;
     OrtValue *outputTensor = NULL;
-    ortApi->CreateTensorWithDataAsOrtValue(ortMemoryInfo, &(double)inputData, sizeof((double)inputData),
+    static OrtMemoryInfo *ortMemoryInfo = NULL;
+    ortApi->CreateCpuMemoryInfo(OrtDeviceAllocator, OrtMemTypeDefault, &ortMemoryInfo);
+
+    ortApi->CreateTensorWithDataAsOrtValue(ortMemoryInfo, inputData, inputDims[0] * sizeof(double),
                                            inputDims, 1, ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE,
                                            &inputTensor);
-
-    OrtAllocator *ortAllocator = NULL;
-    ortApi->GetAllocatorWithDefaultOptions(&ortAllocator);
-
-    const char *inputName;
-    ortApi->SessionGetInputName(ortSession, 0, ortAllocator, &inputName);
-
-    const char *outputName;
-    ortApi->SessionGetOutputName(ortSession, 0, ortAllocator, &outputName);
 
     // 执行推理
     ortStatus = ortApi->Run(ortSession, NULL, &inputName, &inputTensor, 1, &outputName, 1, &outputTensor);
     if (ortStatus != NULL)
-        printf("%s\n", ortApi->GetErrorMessage(ortStatus));
+        printf("Run:%s\n", ortApi->GetErrorMessage(ortStatus));
 
     // 获取输出结果
     double *Data;
     ortApi->GetTensorMutableData(outputTensor, (void **)&Data);
-    printf("Output: %f\n", Data[0]);    
+    if (ortStatus != NULL)
+        printf("GetTensorMutableData:%s\n", ortApi->GetErrorMessage(ortStatus));
 
-    return Data[0];
+    // 释放资源
+    ortApi->ReleaseMemoryInfo(ortMemoryInfo);
+    ortApi->ReleaseValue(inputTensor);
+    ortApi->ReleaseValue(outputTensor);
+
+    return Data;
 }
+
 __declspec(dllexport) const char *__stdcall ortGetVersionString()
 {
     const OrtApiBase *ortApiBase = OrtGetApiBase();
@@ -106,7 +108,14 @@ void main()
     ortInit(ORT_LOGGING_LEVEL_VERBOSE);
     printf("ONNX Runtime Version: %s\n", ortGetVersionString());
     ortLoadModelFromFile("C:/workspace/github/GM-OnnxRuntime/mlp.onnx");
-    ortInferenceDouble2Double(0.5);
-    ortInferenceDouble2Double(0.1);
+    int64_t inputDims[] = {3};
+    double inputData[] = {0.1, 0.2, 0.3};
+    double *data = ortRunDouble(inputData, inputDims);
+
+    for (int i = 0; i < 3; i++)
+    {
+        printf("%f,", data[i]);
+    }
+
     ortFree();
 }
